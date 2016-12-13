@@ -1,0 +1,24 @@
+
+# Maven 
+target/
+
+# Netbeans
+build/
+dist/
+#nbproject/
+nb-configuration.xml
+nbactions.xml
+
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.settings/
+
+.classpath
+
+.project
+
+# Maven 
+pom.xml.versionsBackup
