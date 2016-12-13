@@ -2,15 +2,12 @@ package me.legrange.yaml.app.config;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import me.legrange.yaml.app.config.annotation.NotBlank;
 import me.legrange.yaml.app.config.annotation.NotEmpty;
 import me.legrange.yaml.app.config.annotation.NotNull;
@@ -26,16 +23,17 @@ public abstract class YamlLoader {
     /**
      * Read the configuration file and return a configuration object.
      *
+     * @param <C>
      * @param fileName The file to read.
      * @param clazz Configuration implementation class to load.
      * @return The configuration object.
      * @throws ConfigurationException Thrown if there is a problem reading or
      * parsing the configuration.
      */
-    public static Configuration readConfiguration(String fileName, Class<? extends Configuration> clazz) throws ConfigurationException {
+    public static <C extends Configuration> C readConfiguration(String fileName, Class<C> clazz) throws ConfigurationException {
         Yaml yaml = new Yaml();
         try (InputStream in = Files.newInputStream(Paths.get(fileName))) {
-            Configuration conf = yaml.loadAs(in, clazz);
+            C conf = yaml.loadAs(in, clazz);
             validate(conf);
             return conf;
         } catch (IOException ex) {
