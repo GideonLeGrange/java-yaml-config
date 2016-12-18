@@ -8,9 +8,12 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import me.legrange.yaml.app.config.annotation.NotBlank;
 import me.legrange.yaml.app.config.annotation.NotEmpty;
 import me.legrange.yaml.app.config.annotation.NotNull;
+import me.legrange.yaml.app.config.annotation.Numeric;
 import org.yaml.snakeyaml.Yaml;
 
 /**
@@ -41,7 +44,7 @@ public abstract class YamlLoader {
         }
     }
 
-    private static void validate(Configuration conf) throws ValidationException {
+    private static void validate(Object conf) throws ValidationException {
         for (Field field : conf.getClass().getDeclaredFields()) {
             if (field.isAnnotationPresent(NotNull.class)) {
                 validateNotNull(field, conf);
@@ -52,6 +55,22 @@ public abstract class YamlLoader {
             if (field.isAnnotationPresent(NotEmpty.class)) {
                 validateNotEmpty(field, conf);
             }
+            if (field.isAnnotationPresent(Numeric.class)) {
+                validateNumber(field.getAnnotation(Numeric.class), field, conf);
+            }
+        }
+    }
+
+    private static void validateNumber(Numeric ann, Field field, Object inst) throws ValidationException {
+        validateNotNull(field, inst);
+        Object val = get(field, inst);
+        if (!(val instanceof Number)) {
+             throw new ValidationException("%s in %s is not a Number as expected", field.getName(), inst.getClass().getSimpleName());
+        }
+        Number num = (Number) val;
+        double nval = num.doubleValue();
+        if ((nval < ann.min()) || (nval > ann.max())) {
+             throw new ValidationException("%s in %s must be in the range %s...%s ", field.getName(), inst.getClass().getSimpleName(), ann.min(), ann.max());
         }
     }
 
@@ -60,15 +79,16 @@ public abstract class YamlLoader {
         if (val == null) {
             throw new ValidationException("%s in %s must not be undefined", field.getName(), inst.getClass().getSimpleName());
         }
+        validate(val);
     }
-    
+
     private static void validateNotBlank(Field field, Object inst) throws ValidationException {
         validateNotNull(field, inst);
         Object val = get(field, inst);
         if (!(val instanceof String)) {
             throw new ValidationException("%s in %s is not a String as expected", field.getName(), inst.getClass().getSimpleName());
         }
-        if (((String)val).isEmpty()) {
+        if (((String) val).isEmpty()) {
             throw new ValidationException("%s in %s must not be blank", field.getName(), inst.getClass().getSimpleName());
         }
     }
@@ -79,11 +99,14 @@ public abstract class YamlLoader {
         if (!(val instanceof Collection)) {
             throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
         }
-        if (((Collection)val).isEmpty()) {
+        Collection col = (Collection) val;
+        if (col.isEmpty()) {
             throw new ValidationException("%s in %s must not be empty", field.getName(), inst.getClass().getSimpleName());
         }
+        for (Object o : col) {
+            validate(o);
+        }
     }
-
 
     private static Object get(Field field, Object inst) throws ValidationException {
         if (field.isAccessible()) {
@@ -91,7 +114,7 @@ public abstract class YamlLoader {
                 return field.get(inst);
             } catch (IllegalArgumentException ex) {
                 throw new ValidationException("Field '%s' is not found on object '%s'", field.getName(), inst.getClass().getSimpleName());
-                
+
             } catch (IllegalAccessException ex) {
                 throw new ValidationException("Field '%s' on '%s' is not accessible", field.getName(), inst.getClass().getSimpleName());
             }
@@ -118,6 +141,5 @@ public abstract class YamlLoader {
             }
         }
     }
-
 
 }
