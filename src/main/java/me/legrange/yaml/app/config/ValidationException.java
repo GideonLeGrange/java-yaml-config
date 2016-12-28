@@ -6,7 +6,12 @@ package me.legrange.yaml.app.config;
  */
 public class ValidationException extends ConfigurationException {
 
-    public ValidationException(String message, Object... args) {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ValidationException(String message, Object... args) {
         super(message, args);
     }
 

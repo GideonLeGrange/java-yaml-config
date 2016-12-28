@@ -1,4 +1,4 @@
-/*
+    /*
  * Copyright 2016 gideon.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,30 +12,38 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ */ 
 
-package me.legrange.yaml.app.config;
+package me.legrange.yaml.app.config.snippets;
+
+import me.legrange.yaml.app.config.annotation.NotBlank;
+import me.legrange.yaml.app.config.annotation.NotNull;
 
 /**
- * Thrown if there is a problem with the application configuration. 
- * 
- * @since 1.0
- * @author Gideon le Grange https://github.com/GideonLeGrange
+ * MQTT Configuration.
+ * @author gideon
  */
-public class ConfigurationException extends Exception {
+public class Mqtt {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-
-	public ConfigurationException(String message, Object...args) {
-        super(String.format(message, args));
+    public Broker getBroker() {
+        return broker;
     }
 
-    public ConfigurationException(String message, Throwable cause) {
-        super(message, cause);
+    public void setBroker(Broker broker) {
+        this.broker = broker;
     }
-    
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
+
+    @NotNull
+    private Broker broker;
+    @NotBlank
+    private String topic; 
     
 }

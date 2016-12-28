@@ -18,4 +18,5 @@ public @interface Numeric {
     
     double max() default Double.MAX_VALUE;
     
+    
 }

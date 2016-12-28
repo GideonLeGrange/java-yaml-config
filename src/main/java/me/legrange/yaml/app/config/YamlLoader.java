@@ -8,13 +8,13 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.yaml.snakeyaml.Yaml;
+
 import me.legrange.yaml.app.config.annotation.NotBlank;
 import me.legrange.yaml.app.config.annotation.NotEmpty;
 import me.legrange.yaml.app.config.annotation.NotNull;
 import me.legrange.yaml.app.config.annotation.Numeric;
-import org.yaml.snakeyaml.Yaml;
 
 /**
  * Configuration generated from YAML config file.
@@ -43,7 +43,7 @@ public abstract class YamlLoader {
             throw new ConfigurationException(String.format("Error reading configuraion file '%s': %s", fileName, ex.getMessage()), ex);
         }
     }
-
+    
     private static void validate(Object conf) throws ValidationException {
         for (Field field : conf.getClass().getDeclaredFields()) {
             if (field.isAnnotationPresent(NotNull.class)) {
@@ -99,7 +99,7 @@ public abstract class YamlLoader {
         if (!(val instanceof Collection)) {
             throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
         }
-        Collection col = (Collection) val;
+        Collection<?> col = (Collection<?>) val;
         if (col.isEmpty()) {
             throw new ValidationException("%s in %s must not be empty", field.getName(), inst.getClass().getSimpleName());
         }
