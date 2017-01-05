@@ -33,17 +33,17 @@ public class Mqtt {
         this.broker = broker;
     }
 
-    public String getTopic() {
-        return topic;
+    public String getPublishTopic() {
+        return publishTopic;
     }
 
-    public void setTopic(String topic) {
-        this.topic = topic;
+    public void setPublishTopic(String publishTopic) {
+        this.publishTopic = publishTopic;
     }
 
     @NotNull
     private Broker broker;
     @NotBlank
-    private String topic; 
+    private String publishTopic; 
     
 }
