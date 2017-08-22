@@ -1,5 +1,5 @@
 
-package me.legrange.yaml.app.config.annotation;
+package me.legrange.config.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

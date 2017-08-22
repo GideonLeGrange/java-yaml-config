@@ -1,4 +1,4 @@
-package me.legrange.yaml.app.config;
+package me.legrange.config;
 
 /**
  *

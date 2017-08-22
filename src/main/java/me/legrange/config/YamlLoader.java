@@ -1,4 +1,4 @@
-package me.legrange.yaml.app.config;
+package me.legrange.config;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,10 +11,10 @@ import java.util.Collection;
 
 import org.yaml.snakeyaml.Yaml;
 
-import me.legrange.yaml.app.config.annotation.NotBlank;
-import me.legrange.yaml.app.config.annotation.NotEmpty;
-import me.legrange.yaml.app.config.annotation.NotNull;
-import me.legrange.yaml.app.config.annotation.Numeric;
+import me.legrange.config.annotation.NotBlank;
+import me.legrange.config.annotation.NotEmpty;
+import me.legrange.config.annotation.NotNull;
+import me.legrange.config.annotation.Numeric;
 
 /**
  * Configuration generated from YAML config file.

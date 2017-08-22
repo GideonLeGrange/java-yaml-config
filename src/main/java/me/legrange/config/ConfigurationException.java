@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package me.legrange.yaml.app.config;
+package me.legrange.config;
 
 /**
  * Thrown if there is a problem with the application configuration. 
