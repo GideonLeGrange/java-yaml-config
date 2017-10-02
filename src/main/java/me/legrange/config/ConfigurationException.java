@@ -13,29 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package me.legrange.config;
 
 /**
- * Thrown if there is a problem with the application configuration. 
- * 
+ * Thrown if there is a problem with the application configuration.
+ *
  * @since 1.0
  * @author Gideon le Grange https://github.com/GideonLeGrange
  */
 public class ConfigurationException extends Exception {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	public ConfigurationException(String message, Object...args) {
+    public ConfigurationException(String message, Object... args) {
         super(String.format(message, args));
     }
 
     public ConfigurationException(String message, Throwable cause) {
         super(message, cause);
     }
-    
-    
+
 }
