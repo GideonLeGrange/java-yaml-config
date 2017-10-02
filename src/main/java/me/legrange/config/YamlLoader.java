@@ -22,7 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Collection;
+import me.legrange.config.annotation.Collection;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -32,7 +32,8 @@ import me.legrange.config.annotation.NotNull;
 import me.legrange.config.annotation.Numeric;
 
 /**
- * Read a configuration from a from YAML config file and return a configuration object. .
+ * Read a configuration from a from YAML config file and return a configuration
+ * object. .
  *
  * @author gideon
  */
@@ -58,7 +59,7 @@ public abstract class YamlLoader {
             throw new ConfigurationException(String.format("Error reading configuraion file '%s': %s", fileName, ex.getMessage()), ex);
         }
     }
-    
+
     private static void validate(Object conf) throws ValidationException {
         for (Field field : conf.getClass().getDeclaredFields()) {
             if (field.isAnnotationPresent(NotNull.class)) {
@@ -73,6 +74,9 @@ public abstract class YamlLoader {
             if (field.isAnnotationPresent(Numeric.class)) {
                 validateNumber(field.getAnnotation(Numeric.class), field, conf);
             }
+            if (field.isAnnotationPresent(Collection.class)) {
+                validateCollection(field.getAnnotation(Collection.class), field, conf);
+            }
         }
     }
 
@@ -80,12 +84,12 @@ public abstract class YamlLoader {
         validateNotNull(field, inst);
         Object val = get(field, inst);
         if (!(val instanceof Number)) {
-             throw new ValidationException("%s in %s is not a Number as expected", field.getName(), inst.getClass().getSimpleName());
+            throw new ValidationException("%s in %s is not a Number as expected", field.getName(), inst.getClass().getSimpleName());
         }
         Number num = (Number) val;
         double nval = num.doubleValue();
         if ((nval < ann.min()) || (nval > ann.max())) {
-             throw new ValidationException("%s in %s must be in the range %s...%s ", field.getName(), inst.getClass().getSimpleName(), ann.min(), ann.max());
+            throw new ValidationException("%s in %s must be in the range %s...%s ", field.getName(), inst.getClass().getSimpleName(), ann.min(), ann.max());
         }
     }
 
@@ -114,9 +118,27 @@ public abstract class YamlLoader {
         if (!(val instanceof Collection)) {
             throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
         }
-        Collection<?> col = (Collection<?>) val;
+        java.util.Collection<?> col = (java.util.Collection<?>) val;
         if (col.isEmpty()) {
             throw new ValidationException("%s in %s must not be empty", field.getName(), inst.getClass().getSimpleName());
+        }
+        for (Object o : col) {
+            validate(o);
+        }
+    }
+
+    private static void validateCollection(Collection can, Field field, Object inst) throws ValidationException {
+        validateNotNull(field, inst);
+        Object val = get(field, inst);
+        if (!(val instanceof Collection)) {
+            throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
+        }
+        java.util.Collection<?> col = (java.util.Collection<?>) val;
+        int size = col.size();
+        if ((size < can.min()) || (size > can.max())) {
+            throw new ValidationException("%s in %s must contain between %d and %d elements, but has %d", 
+                    field.getName(), inst.getClass().getSimpleName(),
+                    can.min(), (can.max() == Integer.MAX_VALUE) ? "many" : can.max(), size);
         }
         for (Object o : col) {
             validate(o);
