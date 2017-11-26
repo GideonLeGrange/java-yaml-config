@@ -115,7 +115,7 @@ public abstract class YamlLoader {
     private static void validateNotEmpty(Field field, Object inst) throws ValidationException {
         validateNotNull(field, inst);
         Object val = get(field, inst);
-        if (!(val instanceof Collection)) {
+        if (!(val instanceof java.util.Collection)) {
             throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
         }
         java.util.Collection<?> col = (java.util.Collection<?>) val;
@@ -130,8 +130,8 @@ public abstract class YamlLoader {
     private static void validateCollection(Collection can, Field field, Object inst) throws ValidationException {
         validateNotNull(field, inst);
         Object val = get(field, inst);
-        if (!(val instanceof Collection)) {
-            throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
+        if (!(val instanceof java.util.Collection)) {
+          throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
         }
         java.util.Collection<?> col = (java.util.Collection<?>) val;
         int size = col.size();
