@@ -53,6 +53,9 @@ public abstract class YamlLoader {
         Yaml yaml = new Yaml();
         try (InputStream in = Files.newInputStream(Paths.get(fileName))) {
             C conf = yaml.loadAs(in, clazz);
+            if (conf == null) {
+                throw new ConfigurationException("Could not load configuration file '%s'. Yaml returned null", fileName);
+            }
             validate(conf);
             return conf;
         } catch (IOException ex) {
