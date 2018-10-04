@@ -64,22 +64,26 @@ public abstract class YamlLoader {
     }
 
     private static void validate(Object conf) throws ValidationException {
-        for (Field field : conf.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(NotNull.class)) {
-                validateNotNull(field, conf);
+        Class clazz = conf.getClass();
+        while (!Object.class.equals(clazz)) {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (field.isAnnotationPresent(NotNull.class)) {
+                    validateNotNull(field, conf);
+                }
+                if (field.isAnnotationPresent(NotBlank.class)) {
+                    validateNotBlank(field, conf);
+                }
+                if (field.isAnnotationPresent(NotEmpty.class)) {
+                    validateNotEmpty(field, conf);
+                }
+                if (field.isAnnotationPresent(Numeric.class)) {
+                    validateNumber(field.getAnnotation(Numeric.class), field, conf);
+                }
+                if (field.isAnnotationPresent(Collection.class)) {
+                    validateCollection(field.getAnnotation(Collection.class), field, conf);
+                }
             }
-            if (field.isAnnotationPresent(NotBlank.class)) {
-                validateNotBlank(field, conf);
-            }
-            if (field.isAnnotationPresent(NotEmpty.class)) {
-                validateNotEmpty(field, conf);
-            }
-            if (field.isAnnotationPresent(Numeric.class)) {
-                validateNumber(field.getAnnotation(Numeric.class), field, conf);
-            }
-            if (field.isAnnotationPresent(Collection.class)) {
-                validateCollection(field.getAnnotation(Collection.class), field, conf);
-            }
+            clazz = clazz.getSuperclass();
         }
     }
 
@@ -134,12 +138,12 @@ public abstract class YamlLoader {
         validateNotNull(field, inst);
         Object val = get(field, inst);
         if (!(val instanceof java.util.Collection)) {
-          throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
+            throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
         }
         java.util.Collection<?> col = (java.util.Collection<?>) val;
         int size = col.size();
         if ((size < can.min()) || (size > can.max())) {
-            throw new ValidationException("%s in %s must contain between %d and %d elements, but has %d", 
+            throw new ValidationException("%s in %s must contain between %d and %d elements, but has %d",
                     field.getName(), inst.getClass().getSimpleName(),
                     can.min(), (can.max() == Integer.MAX_VALUE) ? "many" : can.max(), size);
         }
@@ -166,7 +170,7 @@ public abstract class YamlLoader {
                 name = "get" + name;
             }
             try {
-                Method meth = inst.getClass().getDeclaredMethod(name, new Class[]{});
+                Method meth = inst.getClass().getMethod(name, new Class[]{});
                 return meth.invoke(inst, new Object[]{});
             } catch (NoSuchMethodException ex) {
                 throw new ValidationException("Field '%s' on '%s' does not have a get-method", field.getName(), inst.getClass().getSimpleName());
