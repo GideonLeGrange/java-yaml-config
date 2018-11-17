@@ -17,27 +17,33 @@ package me.legrange.config;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import me.legrange.config.annotation.Collection;
-
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.metadata.BeanDescriptor;
 import org.yaml.snakeyaml.Yaml;
-
-import me.legrange.config.annotation.NotBlank;
-import me.legrange.config.annotation.NotEmpty;
-import me.legrange.config.annotation.NotNull;
-import me.legrange.config.annotation.Numeric;
 
 /**
  * Read a configuration from a from YAML config file and return a configuration
  * object. .
  *
  * @author gideon
+ * @param <C> Type of config being processed.
  */
-public abstract class YamlLoader {
+public final class YamlLoader<C extends Configuration> {
+
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+    private final Yaml yaml = new Yaml();
+    private final Class<C> clazz;
 
     /**
      * Read the configuration file and return a configuration object.
@@ -50,109 +56,62 @@ public abstract class YamlLoader {
      * parsing the configuration.
      */
     public static <C extends Configuration> C readConfiguration(String fileName, Class<C> clazz) throws ConfigurationException {
-        Yaml yaml = new Yaml();
+        YamlLoader<C> loader = new YamlLoader(clazz);
+        C conf = loader.load(fileName);
+        loader.validate(conf);
+        return conf;
+    }
+
+    private C load(String fileName) throws ConfigurationException {
         try (InputStream in = Files.newInputStream(Paths.get(fileName))) {
             C conf = yaml.loadAs(in, clazz);
             if (conf == null) {
                 throw new ConfigurationException("Could not load configuration file '%s'. Yaml returned null", fileName);
             }
-            validate(conf);
             return conf;
         } catch (IOException ex) {
             throw new ConfigurationException(String.format("Error reading configuraion file '%s': %s", fileName, ex.getMessage()), ex);
         }
+
     }
 
-    private static void validate(Object conf) throws ValidationException {
-        Class clazz = conf.getClass();
-        while (!Object.class.equals(clazz)) {
-            for (Field field : clazz.getDeclaredFields()) {
-                if (field.isAnnotationPresent(NotNull.class)) {
-                    validateNotNull(field, conf);
+    private void validate(Object conf) throws ValidationException {
+        try {
+            BeanDescriptor constraintsForClass = validator.getConstraintsForClass(conf.getClass());
+            Set<ConstraintViolation<Object>> errors = validator.validate(conf);
+            if (!errors.isEmpty()) {
+                throw new ValidationException(errors.iterator().next().getMessage(), errors);
+            }
+            Class clazz = conf.getClass();
+            if (clazz.isPrimitive() || clazz.isEnum() || (conf instanceof Number) || (conf instanceof String)) {
+                return;
+            }
+            if (conf instanceof Collection) {
+                for (Object item : ((Collection) conf)) {
+                    validate(item);
                 }
-                if (field.isAnnotationPresent(NotBlank.class)) {
-                    validateNotBlank(field, conf);
+                return;
+            }
+            if (conf instanceof Map) {
+                for (Object item : ((Map) conf).values()) {
+                    validate(item);
                 }
-                if (field.isAnnotationPresent(NotEmpty.class)) {
-                    validateNotEmpty(field, conf);
-                }
-                if (field.isAnnotationPresent(Numeric.class)) {
-                    validateNumber(field.getAnnotation(Numeric.class), field, conf);
-                }
-                if (field.isAnnotationPresent(Collection.class)) {
-                    validateCollection(field.getAnnotation(Collection.class), field, conf);
+                return;
+            }
+            for (Field field : conf.getClass().getDeclaredFields()) {
+                if (!field.isEnumConstant() && !field.isSynthetic()) {
+                    Object val = get(field, conf);
+                    if (val != null) {
+                        validate(val);
+                    }
                 }
             }
-            clazz = clazz.getSuperclass();
+        } catch (AnnotationFormatError | IllegalArgumentException ex) {
+            throw new ValidationException(ex.getMessage(), ex);
         }
     }
 
-    private static void validateNumber(Numeric ann, Field field, Object inst) throws ValidationException {
-        validateNotNull(field, inst);
-        Object val = get(field, inst);
-        if (!(val instanceof Number)) {
-            throw new ValidationException("%s in %s is not a Number as expected", field.getName(), inst.getClass().getSimpleName());
-        }
-        Number num = (Number) val;
-        double nval = num.doubleValue();
-        if ((nval < ann.min()) || (nval > ann.max())) {
-            throw new ValidationException("%s in %s must be in the range %s...%s ", field.getName(), inst.getClass().getSimpleName(), ann.min(), ann.max());
-        }
-    }
-
-    private static void validateNotNull(Field field, Object inst) throws ValidationException {
-        Object val = get(field, inst);
-        if (val == null) {
-            throw new ValidationException("%s in %s must not be undefined", field.getName(), inst.getClass().getSimpleName());
-        }
-        validate(val);
-    }
-
-    private static void validateNotBlank(Field field, Object inst) throws ValidationException {
-        validateNotNull(field, inst);
-        Object val = get(field, inst);
-        if (!(val instanceof String)) {
-            throw new ValidationException("%s in %s is not a String as expected", field.getName(), inst.getClass().getSimpleName());
-        }
-        if (((String) val).isEmpty()) {
-            throw new ValidationException("%s in %s must not be blank", field.getName(), inst.getClass().getSimpleName());
-        }
-    }
-
-    private static void validateNotEmpty(Field field, Object inst) throws ValidationException {
-        validateNotNull(field, inst);
-        Object val = get(field, inst);
-        if (!(val instanceof java.util.Collection)) {
-            throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
-        }
-        java.util.Collection<?> col = (java.util.Collection<?>) val;
-        if (col.isEmpty()) {
-            throw new ValidationException("%s in %s must not be empty", field.getName(), inst.getClass().getSimpleName());
-        }
-        for (Object o : col) {
-            validate(o);
-        }
-    }
-
-    private static void validateCollection(Collection can, Field field, Object inst) throws ValidationException {
-        validateNotNull(field, inst);
-        Object val = get(field, inst);
-        if (!(val instanceof java.util.Collection)) {
-            throw new ValidationException("%s in %s is not a collection as expected", field.getName(), inst.getClass().getSimpleName());
-        }
-        java.util.Collection<?> col = (java.util.Collection<?>) val;
-        int size = col.size();
-        if ((size < can.min()) || (size > can.max())) {
-            throw new ValidationException("%s in %s must contain between %d and %d elements, but has %d",
-                    field.getName(), inst.getClass().getSimpleName(),
-                    can.min(), (can.max() == Integer.MAX_VALUE) ? "many" : can.max(), size);
-        }
-        for (Object o : col) {
-            validate(o);
-        }
-    }
-
-    private static Object get(Field field, Object inst) throws ValidationException {
+    private Object get(Field field, Object inst) throws ValidationException {
         if (field.isAccessible()) {
             try {
                 return field.get(inst);
@@ -170,7 +129,7 @@ public abstract class YamlLoader {
                 name = "get" + name;
             }
             try {
-                Method meth = inst.getClass().getMethod(name, new Class[]{});
+                Method meth = inst.getClass().getDeclaredMethod(name, new Class[]{});
                 return meth.invoke(inst, new Object[]{});
             } catch (NoSuchMethodException ex) {
                 throw new ValidationException("Field '%s' on '%s' does not have a get-method", field.getName(), inst.getClass().getSimpleName());
@@ -186,4 +145,8 @@ public abstract class YamlLoader {
         }
     }
 
+    private YamlLoader(Class<C> clazz) {
+        this.clazz = clazz;
+
+    }
 }
