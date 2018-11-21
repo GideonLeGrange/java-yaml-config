@@ -83,7 +83,7 @@ public final class YamlLoader<C extends Configuration> {
                 throw new ValidationException(errors.iterator().next().getMessage(), errors);
             }
             Class clazz = conf.getClass();
-            if (clazz.isPrimitive() || clazz.isEnum() || (conf instanceof Number) || (conf instanceof String)) {
+            if (clazz.isPrimitive() || clazz.isEnum() || (conf instanceof Number) || (conf instanceof String) || (conf instanceof Boolean)) {
                 return;
             }
             if (conf instanceof Collection) {
@@ -123,7 +123,7 @@ public final class YamlLoader<C extends Configuration> {
             }
         } else {
             String name = field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-            if (field.getType().equals(Boolean.class)) {
+            if (field.getType().equals(Boolean.class) || field.getType().equals(boolean.class)) {
                 name = "is" + name;
             } else {
                 name = "get" + name;
