@@ -26,6 +26,8 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -56,23 +58,31 @@ public final class YamlLoader<C extends Configuration> {
      * parsing the configuration.
      */
     public static <C extends Configuration> C readConfiguration(String fileName, Class<C> clazz) throws ConfigurationException {
-        YamlLoader<C> loader = new YamlLoader(clazz);
-        C conf = loader.load(fileName);
-        loader.validate(conf);
-        return conf;
-    }
-
-    private C load(String fileName) throws ConfigurationException {
-        try (InputStream in = Files.newInputStream(Paths.get(fileName))) {
-            C conf = yaml.loadAs(in, clazz);
+        try {
+            YamlLoader<C> loader = new YamlLoader(clazz);
+            C conf = loader.load(Files.newInputStream(Paths.get(fileName)));
             if (conf == null) {
                 throw new ConfigurationException("Could not load configuration file '%s'. Yaml returned null", fileName);
             }
+            loader.validate(conf);
             return conf;
         } catch (IOException ex) {
             throw new ConfigurationException(String.format("Error reading configuraion file '%s': %s", fileName, ex.getMessage()), ex);
         }
+    }
 
+    public static <C extends Configuration> C readConfiguration(InputStream in, Class<C> clazz) throws ConfigurationException {
+        YamlLoader<C> loader = new YamlLoader(clazz);
+        C conf = loader.load(in);
+        if (conf == null) {
+            throw new ConfigurationException("Could not load configuration from input stream'. Yaml returned null");
+        }
+        loader.validate(conf);
+        return conf;
+    }
+
+    private C load(InputStream in) throws ConfigurationException {
+        return yaml.loadAs(in, clazz);
     }
 
     private void validate(Object conf) throws ValidationException {
