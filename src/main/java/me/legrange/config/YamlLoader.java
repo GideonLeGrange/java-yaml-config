@@ -97,6 +97,7 @@ public final class YamlLoader<C extends Configuration> {
                     }
                 }
                 buf.append(line);
+                buf.append("\n");
             }
         }
         catch (IOException ex) {
