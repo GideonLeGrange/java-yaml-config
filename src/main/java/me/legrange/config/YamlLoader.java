@@ -79,7 +79,7 @@ public final class YamlLoader<C extends Configuration> {
     }
 
     private C load(InputStream in, String from) throws ConfigurationException {
-        final String PATTERN = "(\\$\\{[.]})";
+        final String PATTERN = "\\$\\{([A-Za-z_]+)\\}";
         StringBuilder buf = new StringBuilder();
         Pattern matchEnv = Pattern.compile(PATTERN);
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
@@ -103,6 +103,7 @@ public final class YamlLoader<C extends Configuration> {
         catch (IOException ex) {
             throw new ConfigurationException(format("Could not load configuration from %s' (%s)", from, ex.getMessage()), ex);
         }
+        System.out.println(buf);
         C conf = yaml.loadAs(buf.toString(), clazz);
         if (conf == null) {
             throw new ConfigurationException(format("Could not load configuration from %s. Yaml returned null", from));
