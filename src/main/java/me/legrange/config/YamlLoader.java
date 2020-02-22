@@ -96,6 +96,7 @@ public final class YamlLoader<C extends Configuration> {
                         throw new ConfigurationException(format("Cannot find environment variable '%s'", key));
                     }
                 }
+                buf.append(line);
             }
         }
         catch (IOException ex) {
@@ -103,7 +104,7 @@ public final class YamlLoader<C extends Configuration> {
         }
         C conf = yaml.loadAs(buf.toString(), clazz);
         if (conf == null) {
-            throw new ConfigurationException(format("Could not load configuration from %s'. Yaml returned null", from));
+            throw new ConfigurationException(format("Could not load configuration from %s. Yaml returned null", from));
         }
         validate(conf);
         return conf;
