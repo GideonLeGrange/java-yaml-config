@@ -103,7 +103,6 @@ public final class YamlLoader<C extends Configuration> {
         catch (IOException ex) {
             throw new ConfigurationException(format("Could not load configuration from %s' (%s)", from, ex.getMessage()), ex);
         }
-        System.out.println(buf);
         C conf = yaml.loadAs(buf.toString(), clazz);
         if (conf == null) {
             throw new ConfigurationException(format("Could not load configuration from %s. Yaml returned null", from));
