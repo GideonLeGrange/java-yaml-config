@@ -88,7 +88,7 @@ public final class YamlLoader<C extends Configuration> {
                 String line = reader.readLine();
                 Matcher matcher = matchEnv.matcher(line);
                 if (matcher.find()) {
-                    String key = matcher.group().replace("${","").replace("}", "");
+                    String key = matcher.group(1);
                     if (env.containsKey(key)) {
                         line = line.replace(PATTERN, env.get(key));
                     }
