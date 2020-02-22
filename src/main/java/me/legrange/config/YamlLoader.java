@@ -90,7 +90,7 @@ public final class YamlLoader<C extends Configuration> {
                 if (matcher.find()) {
                     String key = matcher.group(1);
                     if (env.containsKey(key)) {
-                        line = line.replace(PATTERN, env.get(key));
+                        line = line.replace(matcher.group(), env.get(key));
                     }
                     else {
                         throw new ConfigurationException(format("Cannot find environment variable '%s'", key));
