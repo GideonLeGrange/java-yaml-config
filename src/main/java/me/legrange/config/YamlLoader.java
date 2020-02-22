@@ -84,7 +84,7 @@ public final class YamlLoader<C extends Configuration> {
         Pattern matchEnv = Pattern.compile(PATTERN);
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
             Map<String, String> env = System.getenv();
-            if (reader.ready()) {
+            while (reader.ready()) {
                 String line = reader.readLine();
                 Matcher matcher = matchEnv.matcher(line);
                 if (matcher.find()) {
