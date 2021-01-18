@@ -15,8 +15,10 @@
  */
 package me.legrange.config;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -26,11 +28,18 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.metadata.BeanDescriptor;
+
 import org.yaml.snakeyaml.Yaml;
+
+import static java.lang.String.format;
 
 /**
  * Read a configuration from a from YAML config file and return a configuration
@@ -38,6 +47,7 @@ import org.yaml.snakeyaml.Yaml;
  * 
  * @author gideon
  * @param <C> Type of config being processed.
+ * @author gideon
  */
 public final class YamlLoader<C extends Configuration> {
 
@@ -48,39 +58,58 @@ public final class YamlLoader<C extends Configuration> {
     /**
      * Read the configuration file and return a configuration object.
      *
-     * @param <C>
+     * @param <C> The type of config we're returning 
      * @param fileName The file to read.
-     * @param clazz Configuration implementation class to load.
+     * @param clazz    Configuration implementation class to load.
      * @return The configuration object.
      * @throws ConfigurationException Thrown if there is a problem reading or
-     * parsing the configuration.
+     *                                parsing the configuration.
      */
     public static <C extends Configuration> C readConfiguration(String fileName, Class<C> clazz) throws ConfigurationException {
         try {
             YamlLoader<C> loader = new YamlLoader(clazz);
-            C conf = loader.load(Files.newInputStream(Paths.get(fileName)));
-            if (conf == null) {
-                throw new ConfigurationException("Could not load configuration file '%s'. Yaml returned null", fileName);
-            }
-            loader.validate(conf);
-            return conf;
+            return loader.load(Files.newInputStream(Paths.get(fileName)), format("file '%s'", fileName) );
         } catch (IOException ex) {
-            throw new ConfigurationException(String.format("Error reading configuraion file '%s': %s", fileName, ex.getMessage()), ex);
+            throw new ConfigurationException(format("Error reading configuraion file '%s': %s", fileName, ex.getMessage()), ex);
         }
     }
 
     public static <C extends Configuration> C readConfiguration(InputStream in, Class<C> clazz) throws ConfigurationException {
         YamlLoader<C> loader = new YamlLoader(clazz);
-        C conf = loader.load(in);
-        if (conf == null) {
-            throw new ConfigurationException("Could not load configuration from input stream'. Yaml returned null");
-        }
-        loader.validate(conf);
-        return conf;
+        return loader.load(in, "input stream");
     }
 
-    private C load(InputStream in) throws ConfigurationException {
-        return yaml.loadAs(in, clazz);
+    private C load(InputStream in, String from) throws ConfigurationException {
+        final String PATTERN = "\\$\\{([A-Za-z_]+)\\}";
+        StringBuilder buf = new StringBuilder();
+        Pattern matchEnv = Pattern.compile(PATTERN);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+            Map<String, String> env = System.getenv();
+            while (reader.ready()) {
+                String line = reader.readLine();
+                Matcher matcher = matchEnv.matcher(line);
+                if (matcher.find()) {
+                    String key = matcher.group(1);
+                    if (env.containsKey(key)) {
+                        line = line.replace(matcher.group(), env.get(key));
+                    }
+                    else {
+                        throw new ConfigurationException(format("Cannot find environment variable '%s'", key));
+                    }
+                }
+                buf.append(line);
+                buf.append("\n");
+            }
+        }
+        catch (IOException ex) {
+            throw new ConfigurationException(format("Could not load configuration from %s' (%s)", from, ex.getMessage()), ex);
+        }
+        C conf = yaml.loadAs(buf.toString(), clazz);
+        if (conf == null) {
+            throw new ConfigurationException(format("Could not load configuration from %s. Yaml returned null", from));
+        }
+        validate(conf);
+        return conf;
     }
 
     private void validate(Object conf) throws ValidationException {
@@ -148,7 +177,7 @@ public final class YamlLoader<C extends Configuration> {
             } catch (IllegalArgumentException ex) {
                 throw new ValidationException("Method '%s' is not found on object '%s'", name, inst.getClass().getSimpleName());
             } catch (InvocationTargetException ex) {
-                throw new ValidationException(String.format("Error calling '%s' on object '%s': %s", name, inst.getClass().getSimpleName(), ex.getMessage()), ex);
+                throw new ValidationException(format("Error calling '%s' on object '%s': %s", name, inst.getClass().getSimpleName(), ex.getMessage()), ex);
             }
         }
     }
