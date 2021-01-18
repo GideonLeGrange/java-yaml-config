@@ -26,8 +26,6 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -38,8 +36,6 @@ import org.yaml.snakeyaml.Yaml;
  * Read a configuration from a from YAML config file and return a configuration
  * object. .
  * 
- * @todo Fix the thing 
- * @body Do it properly 
  * @author gideon
  * @param <C> Type of config being processed.
  */
