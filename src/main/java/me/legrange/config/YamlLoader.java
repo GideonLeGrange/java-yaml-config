@@ -15,6 +15,13 @@
  */
 package me.legrange.config;
 
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.introspector.BeanAccess;
+
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,54 +35,45 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
-import javax.validation.metadata.BeanDescriptor;
-
-import org.yaml.snakeyaml.Yaml;
 
 import static java.lang.String.format;
 
 /**
  * Read a configuration from a from YAML config file and return a configuration
  * object. .
- * 
- * @author gideon
+ *
  * @param <C> Type of config being processed.
  * @author gideon
+ * @author gideon
  */
-public final class YamlLoader<C extends Configuration> {
+public final class YamlLoader<C> {
 
-    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-    private final Yaml yaml = new Yaml();
+    private final Yaml yaml;
     private final Class<C> clazz;
 
     /**
      * Read the configuration file and return a configuration object.
      *
-     * @param <C> The type of config we're returning 
+     * @param <C>      The type of config we're returning
      * @param fileName The file to read.
      * @param clazz    Configuration implementation class to load.
      * @return The configuration object.
      * @throws ConfigurationException Thrown if there is a problem reading or
      *                                parsing the configuration.
      */
-    public static <C extends Configuration> C readConfiguration(String fileName, Class<C> clazz) throws ConfigurationException {
+    public static <C> C readConfiguration(String fileName, Class<C> clazz) throws ConfigurationException {
         try {
-            YamlLoader<C> loader = new YamlLoader(clazz);
-            return loader.load(Files.newInputStream(Paths.get(fileName)), format("file '%s'", fileName) );
+            YamlLoader<C> loader = new YamlLoader<>(clazz);
+            return loader.load(Files.newInputStream(Paths.get(fileName)), format("file '%s'", fileName));
         } catch (IOException ex) {
             throw new ConfigurationException(format("Error reading configuraion file '%s': %s", fileName, ex.getMessage()), ex);
         }
     }
 
-    public static <C extends Configuration> C readConfiguration(InputStream in, Class<C> clazz) throws ConfigurationException {
-        YamlLoader<C> loader = new YamlLoader(clazz);
+    public static <C> C readConfiguration(InputStream in, Class<C> clazz) throws ConfigurationException {
+        YamlLoader<C> loader = new YamlLoader<>(clazz);
         return loader.load(in, "input stream");
     }
 
@@ -92,16 +90,14 @@ public final class YamlLoader<C extends Configuration> {
                     String key = matcher.group(1);
                     if (env.containsKey(key)) {
                         line = line.replace(matcher.group(), env.get(key));
-                    }
-                    else {
+                    } else {
                         throw new ConfigurationException(format("Cannot find environment variable '%s'", key));
                     }
                 }
                 buf.append(line);
                 buf.append("\n");
             }
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new ConfigurationException(format("Could not load configuration from %s' (%s)", from, ex.getMessage()), ex);
         }
         C conf = yaml.loadAs(buf.toString(), clazz);
@@ -113,24 +109,24 @@ public final class YamlLoader<C extends Configuration> {
     }
 
     private void validate(Object conf) throws ValidationException {
-        try {
-            BeanDescriptor constraintsForClass = validator.getConstraintsForClass(conf.getClass());
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            Validator validator = factory.getValidator();
             Set<ConstraintViolation<Object>> errors = validator.validate(conf);
             if (!errors.isEmpty()) {
                 throw new ValidationException(errors.iterator().next().getMessage(), errors);
             }
-            Class clazz = conf.getClass();
+            Class<?> clazz = conf.getClass();
             if (clazz.isPrimitive() || clazz.isEnum() || (conf instanceof Number) || (conf instanceof String) || (conf instanceof Boolean)) {
                 return;
             }
             if (conf instanceof Collection) {
-                for (Object item : ((Collection) conf)) {
+                for (Object item : ((Collection<?>) conf)) {
                     validate(item);
                 }
                 return;
             }
             if (conf instanceof Map) {
-                for (Object item : ((Map) conf).values()) {
+                for (Object item : ((Map<?,?>) conf).values()) {
                     validate(item);
                 }
                 return;
@@ -166,8 +162,8 @@ public final class YamlLoader<C extends Configuration> {
                 name = "get" + name;
             }
             try {
-                Method meth = inst.getClass().getDeclaredMethod(name, new Class[]{});
-                return meth.invoke(inst, new Object[]{});
+                Method meth = inst.getClass().getDeclaredMethod(name);
+                return meth.invoke(inst);
             } catch (NoSuchMethodException ex) {
                 throw new ValidationException("Field '%s' on '%s' does not have a get-method", field.getName(), inst.getClass().getSimpleName());
             } catch (SecurityException ex) {
@@ -184,6 +180,7 @@ public final class YamlLoader<C extends Configuration> {
 
     private YamlLoader(Class<C> clazz) {
         this.clazz = clazz;
-
+        this.yaml = new Yaml();
+        yaml.setBeanAccess(BeanAccess.FIELD);
     }
 }
