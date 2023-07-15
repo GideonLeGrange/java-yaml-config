@@ -15,8 +15,9 @@
  */
 package me.legrange.config;
 
+import jakarta.validation.ConstraintViolation;
+
 import java.util.Set;
-import javax.validation.ConstraintViolation;
 
 /**
  * Thrown if there is an error validating a configuration variable. 
@@ -26,9 +27,9 @@ import javax.validation.ConstraintViolation;
 public class ValidationException extends ConfigurationException {
 
     private static final long serialVersionUID = 1L;
-    private Set<ConstraintViolation> errors;
+    private Set<ConstraintViolation<?>> errors;
 
-    public ValidationException(String message, Set<ConstraintViolation> errors) {
+    public ValidationException(String message, Set<ConstraintViolation<?>> errors) {
         super(message);
         this.errors = errors;
     }
@@ -37,7 +38,7 @@ public class ValidationException extends ConfigurationException {
         super(message, args);
     }
     
-    public Set<ConstraintViolation> getErrors() {
+    public Set<ConstraintViolation<?>> getErrors() {
         return errors;
     }
 

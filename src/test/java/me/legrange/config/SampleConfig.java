@@ -1,7 +1,7 @@
 package me.legrange.config;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 
 public final class SampleConfig {
 
